@@ -1,29 +1,128 @@
 #pragma once
 
 #include <mono/jit/jit.h>
+#include <mono/metadata/debug-helpers.h>
 
 #include <Mono/Type.h>
+#include <Mono/Domain.h>
+#include <Mono/Method.h>
+#include <Mono/Exception.h>
+#include <Mono/Field.h>
 
-namespace Engine
-{
 namespace Mono
 {
 
 class Object
 {
 public:
-    Object() = default;
-    Object(MonoObject* obj)
-        : m_object(obj), m_type(Type(mono_object_get_class(obj))) {}
+    Object(const Domain& domain, const Type& type)
+        : m_domain(domain.get())
+    {
+        m_object = mono_object_new(domain.get(), type.get());
+        mono_runtime_object_init(m_object);
+    }
 
-    const Type& getType() const { return m_type; }
+    Object(MonoObject* obj)
+        : m_object(obj) {}
+
+    template<typename... Args>
+    Object(const Domain& domain, const Type& type, const std::string& ctor, Args&&... args)
+        : m_domain(domain.get())
+    {
+        m_object = mono_object_new(domain.get(), type.get());
+
+        MonoMethodDesc* ctorDesc = mono_method_desc_new(ctor.c_str(), false);
+        if (!ctorDesc)
+        {
+            throw Exception("Invalid constructor signature: " + ctor);
+        }
+
+        MonoMethod* ctorMethod = mono_method_desc_search_in_class(ctorDesc, type.get());
+        mono_method_desc_free(ctorDesc);
+
+        Method constructor(domain, ctorMethod);
+        constructor.invokeInstance<void(Args...)>(*this, std::forward<Args>(args)...);
+    }
+
+    template<typename FunctionSignature>
+    Method getMethod(const std::string& signature)
+    {
+        Method method(Domain(m_domain), getType(), signature);
+        return method;
+    }
+
+    template<typename FunctionSignature>
+    Method getStaticMethod(const std::string& signature)
+    {
+        Method method(Domain(m_domain), getType(), signature);
+        return method;
+    }
+
+    Field operator[](const std::string& fieldName) const
+    {
+        return Field(Domain(m_domain), *this, getType().getField(fieldName));
+    }
+
+    template<typename T>
+    void setProperty(const std::string& name, const T& value) const
+    {
+        MonoProperty* prop = getType().getProperty(name);
+        MonoObject* ex = nullptr;
+        void** params = new void*[1];
+        params[0] = (void*)ToMonoConverter<T>::convert(Domain(m_domain), value);
+
+        mono_property_set_value(prop, m_object, params, &ex);
+        if (ex)
+        {
+            throw Exception("Error while setting property value: " + name);
+        }
+
+        delete params;
+    }
+
+    Object getProperty(const std::string& name) const
+    {
+        MonoProperty* prop = getType().getProperty(name);
+        MonoObject* ex = nullptr;
+
+        MonoObject* result = mono_property_get_value(prop, m_object, nullptr, &ex);
+        if (ex)
+        {
+            throw Exception("Error while getting property value: " + name);
+        }
+
+        return Object(result);
+    }
+
+    template<typename T>
+    T getProperty(const std::string& name) const
+    {
+        return getProperty(name).as<T>();
+    }
+
+    Type getType() const
+    {
+        MonoClass* cl = mono_object_get_class(m_object);
+        return Type(cl);
+    }
 
     MonoObject* get() const { return m_object; }
 
+    template<typename T>
+    T as() const
+    {
+        assert(m_object != nullptr);
+        return FromMonoConverter<T>::convert(Domain(m_domain), m_object);
+    }
+
+    std::string toString() const
+    {
+        return as<std::string>();
+    }
+
 protected:
     MonoObject* m_object = nullptr;
-    Type m_type;
+    MonoDomain* m_domain = nullptr;
 };
 
-}
 }

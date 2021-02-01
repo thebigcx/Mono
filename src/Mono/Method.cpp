@@ -6,20 +6,20 @@
 
 #include <cassert>
 
-namespace Engine
-{
 namespace Mono
 {
 
-Method::Method(MonoMethod* method)
+Method::Method(const Domain& domain, MonoMethod* method)
+    : m_domain(domain.get()), m_method(method)
 {
     m_method = method;
     generateMeta();
 }
 
-Method::Method(const Type& t, const std::string& name)
+Method::Method(const Domain& domain, const Type& t, const std::string& name)
+    : m_domain(domain.get())
 {
-    auto methodDesc = mono_method_desc_new((":" + name).c_str(), 0);
+    auto methodDesc = mono_method_desc_new(name.c_str(), 0);
     m_method = mono_method_desc_search_in_class(methodDesc, t.get());
     mono_method_desc_free(methodDesc);
 }
@@ -99,5 +99,4 @@ void Method::generateMeta()
     m_fullDeclname = toString(getAccessLevel()) + storage + m_fullname;
 }
 
-}
 }

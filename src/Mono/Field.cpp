@@ -1,30 +1,25 @@
 #include <Mono/Field.h>
 #include <Mono/Exception.h>
 #include <Mono/Domain.h>
+#include <Mono/Mono.h>
+#include <Mono/Object.h>
 
 #include <mono/metadata/attrdefs.h>
 #include <mono/metadata/debug-helpers.h>
 
 #include <cassert>
 
-namespace Engine
-{
 namespace Mono
 {
 
-Field::Field(const Type& type, const std::string& name)
-    : m_field(mono_class_get_field_from_name(type.get(), name.c_str())), m_name(name)
+Field::Field(const Domain& domain, const Object& obj, MonoClassField* field)
+    : m_field(field), m_parent(obj.get()), m_domain(domain.get())
 {
-    if (!m_field)
-        throw Exception("Could not get field: " + name + " in class " + type.getName());
-
-    auto domain = Domain::getCurrentDomain();
-
     generateMeta();
 
     if (isStatic())
     {
-        m_typeVtable = mono_class_vtable(domain->get(), type.get());
+        m_typeVtable = mono_class_vtable(domain.get(), obj.getType().get());
         mono_runtime_class_init(m_typeVtable);
     }
 }
@@ -72,5 +67,4 @@ void Field::generateMeta()
     m_fullDeclname = toString(getAccessLevel()) + storage = m_fullname;
 }
 
-}
 }

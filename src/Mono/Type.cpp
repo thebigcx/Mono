@@ -1,12 +1,10 @@
 #include <Mono/Type.h>
 #include <Mono/Domain.h>
 #include <Mono/Object.h>
-#include <Mono/Property.h>
 #include <Mono/Field.h>
 #include <Mono/Method.h>
+#include <Mono/Mono.h>
 
-namespace Engine
-{
 namespace Mono
 {
 
@@ -23,34 +21,28 @@ Type::Type(MonoType* t)
     generateMeta();
 }
 
-Object Type::createInstance()
+Type::Type(MonoImage* image, const std::string& nameSpace, const std::string& name)
 {
-    Object obj(mono_object_new(Domain::getCurrentDomain()->get(), m_class));
-    mono_runtime_object_init(obj.get());
-    return obj;
+    m_class = mono_class_from_name(image, nameSpace.c_str(), name.c_str());
 }
 
 Method Type::getMethod(const std::string& name)
 {
-    return Method(*this, name);
+    return Method(getCurrentDomain(), *this, name);
 }
 
-Field Type::getField(const std::string& name)
+MonoClassField* Type::getField(const std::string& name)
 {
-    return Field(*this, name);
+    MonoClassField* field = mono_class_get_field_from_name(m_class, name.c_str());
+    if (field == nullptr)
+    {
+        throw Exception("Could not find field: " + name + " in class: " + m_name);
+    }
+
+    return field;
 }
 
-Property Type::getProperty(const std::string& name) const
-{
-    return Property(*this, name);
-}
-
-std::vector<Field> Type::getFields()
-{
-
-}
-
-std::vector<Property> Type::getProperties()
+std::vector<std::string> Type::getProperties()
 {
 
 }
@@ -85,5 +77,4 @@ void Type::generateMeta()
     m_alignof = static_cast<std::size_t>(align);
 }
 
-}
 }

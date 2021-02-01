@@ -5,8 +5,6 @@
 
 #include <mono/jit/jit.h>
 
-namespace Engine
-{
 namespace Mono
 {
 
@@ -17,23 +15,4 @@ public:
         : std::runtime_error(what) {}
 };
 
-class ThunkException : public Exception
-{
-public:
-    ThunkException(MonoObject* obj);
-
-    struct ExceptionInfo
-    {
-        std::string exceptionTypename;
-        std::string message;
-        std::string stacktrace;
-    };
-
-private:
-    ThunkException(const ExceptionInfo& inf);
-
-    ExceptionInfo m_info;
-};
-
-}
 }

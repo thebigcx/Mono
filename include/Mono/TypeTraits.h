@@ -2,8 +2,6 @@
 
 #include <map>
 
-namespace Engine
-{
 namespace Mono
 {
 
@@ -50,5 +48,4 @@ inline const std::map<std::size_t, Typename>& getTypes()
     return typenames;
 }
 
-}
 }

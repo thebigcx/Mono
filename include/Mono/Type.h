@@ -5,8 +5,9 @@
 
 #include <mono/jit/jit.h>
 
-namespace Engine
-{
+#include <Mono/Exception.h>
+#include <Mono/FieldView.h>
+
 namespace Mono
 {
 
@@ -21,14 +22,38 @@ public:
     Type() = default;
     Type(MonoClass* c);
     Type(MonoType* t);
-
-    Object createInstance();
+    Type(MonoImage* image, const std::string& nameSpace, const std::string& name);
 
     Method getMethod(const std::string& name);
-    Field getField(const std::string& name);
-    Property getProperty(const std::string& name) const;
-    std::vector<Field> getFields();
-    std::vector<Property> getProperties();
+    MonoClassField* getField(const std::string& name);
+    MonoProperty* getProperty(const std::string& name)
+    {
+        MonoProperty* prop = mono_class_get_property_from_name(m_class, name.c_str());
+        if (prop == nullptr)
+        {
+            throw Exception("Could not get property: " + name + " in class: " + m_name);
+        }
+
+        return prop;
+    }
+
+    FieldView getFields() const
+    {
+        return FieldView(m_class);
+    }
+
+    Type getNestingType() const
+    {
+        return Type(mono_class_get_nesting_type(m_class));
+    }
+
+    Type getParentType() const
+    {
+        return Type(mono_class_get_parent(m_class));
+    }
+
+    std::vector<std::string> getProperties();
+    
     bool hasBaseType();
     Type getBaseType();
     bool isDerivedFrom(const Type& type);
@@ -64,5 +89,4 @@ private:
     bool m_valueType = true;
 };
 
-}
 }

@@ -2,8 +2,7 @@
 
 #include <string>
 
-namespace Engine
-{
+
 namespace Mono
 {
 
@@ -35,5 +34,4 @@ inline std::string toString(Access acs)
     return "";
 }
 
-}
 }

@@ -1,22 +1,22 @@
 #include <Mono/Assembly.h>
-#include <Mono/Image.h>
 #include <Mono/Type.h>
+#include <Mono/Domain.h>
+#include <Mono/Exception.h>
 
-namespace Engine
-{
 namespace Mono
 {
 
-Image Assembly::getImage()
+Assembly::Assembly(const Domain& domain, const std::string& path)
+    : m_domain(domain.get())
 {
-    return Image(mono_assembly_get_image(m_assembly));
+    m_assembly = mono_domain_assembly_open(domain.get(), path.c_str());
+    m_image = mono_assembly_get_image(m_assembly);
+    
+    if (!m_assembly)
+    {
+        std::string what = "[MONO] Could not open assembly: " + path;
+        throw Exception(what);
+    }
 }
 
-Type Assembly::getType(const std::string& nameSpace, const std::string& name)
-{
-    auto image = getImage();
-    return Type(mono_class_from_name(image.get(), nameSpace.c_str(), name.c_str()));
-}
-
-}
 }
