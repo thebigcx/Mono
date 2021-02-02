@@ -4,6 +4,8 @@
 #include <vector>
 
 #include <mono/jit/jit.h>
+#include <mono/metadata/debug-helpers.h>
+#include <mono/metadata/attrdefs.h>
 
 #include <Mono/Access.h>
 #include <Mono/Domain.h>
@@ -72,8 +74,11 @@ class Method
     friend class Property;
 
 public:
-    Method(const Domain& domain, MonoMethod* method);
-    Method(const Domain& domain, const Type& type, const std::string& name);
+    Method(const Domain& domain, MonoMethod* ptr)
+        : m_domain(domain.get()), m_method(ptr)
+    {
+        generateMeta();
+    }
 
     template<typename T, typename... Args>
     decltype(auto) invokeInstance(MonoObject* object, Args&&... args)
@@ -94,24 +99,79 @@ public:
     }
 
     MonoMethod* get() const { return m_method; }
+/*
+    std::vector<Type> getParamTypes() const
+    {
+        void* iter = nullptr;
+        auto type = mono_signature_get_params(m_methodSignature, &iter);
+        std::vector<Type> params;
+        while (type)
+        {
+            params.emplace_back(Type(type));
+            type = mono_signature_get_params(m_methodSignature, &iter);
+        }
 
-    Type getReturnType() const;
-    std::vector<Type> getParamTypes() const;
+        return params;
+    }
+*/
+    const std::string& getName() const
+    {
+        return m_name;
+    }
 
-    const std::string& getName() const;
-    const std::string& getFullname() const;
-    const std::string& getFullDeclname() const;
+    const std::string& getFullname() const
+    {
+        return m_fullname;
+    }
 
-    Access getAccessLevel() const;
+    const std::string& getFullDeclname() const
+    {
+        return m_fullDeclname;
+    }
 
-    bool isStatic() const;
-    bool isVirtual() const;
+    Access getAccessLevel() const
+    {
+        uint32_t acs = mono_method_get_flags(m_method, nullptr) & MONO_METHOD_ATTR_ACCESS_MASK;
+
+        if (acs == MONO_METHOD_ATTR_PRIVATE)
+            return Access::Private;
+        else if (acs == MONO_METHOD_ATTR_FAM_AND_ASSEM)
+            return Access::ProtectedInternal;
+        else if (acs == MONO_METHOD_ATTR_ASSEM)
+            return Access::Internal;
+        else if (acs == MONO_METHOD_ATTR_FAMILY)
+            return Access::Protected;
+        else if (acs == MONO_METHOD_ATTR_PUBLIC)
+            return Access::Public;
+
+        assert(false);
+        return Access::Private;
+    }
+
+    bool isStatic() const
+    {
+        uint32_t flags = mono_method_get_flags(m_method, nullptr);
+        return (flags & MONO_METHOD_ATTR_STATIC) != 0;
+    }
+
+    bool isVirtual() const
+    {
+        uint32_t flags = mono_method_get_flags(m_method, nullptr);
+        return (flags & MONO_METHOD_ATTR_VIRTUAL) != 0;
+    }
 
     Domain getDomain() const { return Domain(m_domain); }
 
 
 private:
-    void generateMeta();
+    void generateMeta()
+    {
+        m_methodSignature = mono_method_signature(m_method);
+        m_name = mono_method_get_name(m_method);
+        m_fullname = mono_method_full_name(m_method, true);
+        std::string storage = (isStatic() ? " static " : " ");
+        m_fullDeclname = toString(getAccessLevel()) + storage + m_fullname;
+    }
 
 protected:
     MonoMethod* m_method = nullptr;

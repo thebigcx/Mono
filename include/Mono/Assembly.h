@@ -19,7 +19,20 @@ class Assembly
 {
 public:
     Assembly() = default;
-    Assembly(const Domain& domain, const std::string& path);
+
+    Assembly(const Domain& domain, const std::string& path)
+        : m_domain(domain.get())
+    {
+        m_assembly = mono_domain_assembly_open(domain.get(), path.c_str());
+        m_image = mono_assembly_get_image(m_assembly);
+
+        if (!m_assembly)
+        {
+            std::string what = "[MONO] Could not open assembly: " + path;
+            throw Exception(what);
+        }
+    }
+
     Assembly(const Domain& domain, MonoAssembly* assembly)
         : m_assembly(assembly), m_domain(domain.get()) {}
 

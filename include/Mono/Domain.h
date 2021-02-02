@@ -13,7 +13,11 @@ class Assembly;
 class Domain
 {
 public:
-    Domain(const std::string& name);
+    Domain(const std::string& name)
+    {
+        m_domain = mono_domain_create_appdomain(const_cast<char*>(name.c_str()), nullptr);
+    }
+
     Domain(MonoDomain* domain)
         : m_domain(domain) {}
 

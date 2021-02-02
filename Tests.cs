@@ -9,7 +9,7 @@ public class TestClass
     public int price;
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public static extern void helloFromCpp();
+    public static extern int Log();
 
     public TestClass()
     {
@@ -26,9 +26,9 @@ public class TestClass
         //Console.WriteLine("Hello from C#!");
     }
 
-    public static void add(string a, string b)
+    public void add(string a, string b)
     {
-        string result = a + b;
+        price = Log();
         //return result;
     }
 };

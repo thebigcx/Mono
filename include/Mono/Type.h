@@ -7,6 +7,8 @@
 
 #include <Mono/Exception.h>
 #include <Mono/FieldView.h>
+#include <Mono/Method.h>
+#include <Mono/Mono.h>
 
 namespace Mono
 {
@@ -14,18 +16,52 @@ namespace Mono
 class Object;
 class Field;
 class Property;
-class Method;
 
 class Type
 {
 public:
     Type() = default;
-    Type(MonoClass* c);
-    Type(MonoType* t);
-    Type(MonoImage* image, const std::string& nameSpace, const std::string& name);
 
-    Method getMethod(const std::string& name);
-    MonoClassField* getField(const std::string& name);
+    Type(MonoClass* c)
+        : m_class(c)
+    {
+        generateMeta();
+    }
+
+    Type(MonoType* t)
+    {
+        m_class = mono_class_from_mono_type(t);
+        
+        generateMeta();
+    }
+
+    Type(MonoImage* image, const std::string& nameSpace, const std::string& name)
+    {
+        m_class = mono_class_from_name(image, nameSpace.c_str(), name.c_str());
+
+        generateMeta();
+    }
+
+    Method getMethod(const std::string& name)
+    {
+        auto methodDesc = mono_method_desc_new(name.c_str(), 0);
+        MonoMethod* method = mono_method_desc_search_in_class(methodDesc, m_class);
+        mono_method_desc_free(methodDesc);
+
+        return Method(getCurrentDomain(), method);
+    }
+
+    MonoClassField* getField(const std::string& name)
+    {
+        MonoClassField* field = mono_class_get_field_from_name(m_class, name.c_str());
+        if (field == nullptr)
+        {
+            throw Exception("Could not find field: " + name + " in class: " + m_name);
+        }
+
+        return field;
+    }
+
     MonoProperty* getProperty(const std::string& name)
     {
         MonoProperty* prop = mono_class_get_property_from_name(m_class, name.c_str());
@@ -52,11 +88,26 @@ public:
         return Type(mono_class_get_parent(m_class));
     }
 
-    std::vector<std::string> getProperties();
+    std::vector<std::string> getProperties()
+    {
+        
+    }
     
-    bool hasBaseType();
-    Type getBaseType();
-    bool isDerivedFrom(const Type& type);
+    bool hasBaseType()
+    {
+        return mono_class_get_parent(m_class) != nullptr;
+    }
+
+    Type getBaseType()
+    {
+        auto base = mono_class_get_parent(m_class);
+        return Type(base);
+    }
+
+    bool isDerivedFrom(const Type& type)
+    {
+        return mono_class_is_subclass_of(m_class, type.get(), false) != 0;
+    }
 
     MonoClass* get() const { return m_class; }
 
@@ -72,7 +123,19 @@ public:
     bool isValueType() const { return m_valueType; }
 
 private:
-    void generateMeta();
+    void generateMeta()
+    {
+        m_type = mono_class_get_type(m_class);
+        m_namespace = mono_class_get_namespace(m_class);
+        m_name = mono_class_get_name(m_class);
+        m_fullname = m_namespace.empty() ? m_name : m_namespace + "." + m_name;
+        m_rank = mono_class_get_rank(m_class);
+        m_valueType = !!mono_class_is_valuetype(m_class);
+
+        uint32_t align;
+        m_sizeof = std::size_t(mono_class_value_size(m_class, &align));
+        m_alignof = static_cast<std::size_t>(align);
+    }
 
 private:
     MonoClass* m_class = nullptr;

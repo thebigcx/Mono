@@ -43,7 +43,7 @@ class InternalConvertTupleTypesToMono;
 template<typename T>
 class InternalConvertTupleTypesToMono<std::tuple<T>>
 {
-    using ResultType = typename InternalConvertTypeToMono<T>::result;
+    using ResultType = typename InternalConvertTypeToMono<T>::Result;
 
 public:
     using Result = std::tuple<ResultType>;
@@ -80,7 +80,7 @@ private:
     template<typename F, typename MonoReturnType, typename... MonoArgs>
     static typename std::enable_if<!std::is_void<MonoReturnType>::value, MonoReturnType>::type invokeInnerFunction(MonoArgs&&... args)
     {
-        MonoDomain* domain = getCurrentDomain();
+        MonoDomain* domain = getCurrentDomain().get();
         std::aligned_storage<sizeof(F)> dummy;
         auto result = reinterpret_cast<F*>(&dummy)->operator()(FromMonoConverter<Args>::convert(domain, args)...);
         return ToMonoConverter<R>::convert(domain, std::move(result));

@@ -7,13 +7,53 @@
 #include <Mono/Domain.h>
 #include <Mono/Method.h>
 #include <Mono/Exception.h>
-#include <Mono/Field.h>
 
 namespace Mono
 {
 
 class Object
 {
+public:
+    class Field
+    {
+    public:
+        Field(MonoDomain* domain, MonoObject* object, MonoClassField* field)
+            : m_field(field), m_parent(object), m_domain(domain)
+        {
+            
+        }
+
+        template<typename T>
+        void operator=(T&& value)
+        {
+            auto object = ToMonoConverter<T>::convert(m_domain, std::forward<T>(value));
+            mono_field_set_value(m_parent, m_field, (void*)object);
+        }
+
+        template<typename T>
+        operator T() const
+        {
+            return as<T>();
+        }
+
+        template<typename T>
+        T as() const
+        {
+            return FromMonoConverter<T>::convert(m_domain, getUnderlyingObject());
+        }
+
+        MonoObject* getUnderlyingObject() const
+        {
+            return mono_field_get_value_object(m_domain, m_field, m_parent);
+        }
+
+    private:
+        MonoDomain* m_domain = nullptr;
+        MonoClassField* m_field = nullptr;
+        MonoObject* m_parent = nullptr;
+    };
+
+
 public:
     Object(const Domain& domain, const Type& type)
         : m_domain(domain.get())
@@ -47,8 +87,7 @@ public:
     template<typename FunctionSignature>
     Method getMethod(const std::string& signature)
     {
-        Method method(Domain(m_domain), getType(), signature);
-        return method;
+        return getType().getMethod(signature);
     }
 
     template<typename FunctionSignature>
@@ -60,7 +99,7 @@ public:
 
     Field operator[](const std::string& fieldName) const
     {
-        return Field(Domain(m_domain), *this, getType().getField(fieldName));
+        return Field(m_domain, m_object, getType().getField(fieldName));
     }
 
     template<typename T>
