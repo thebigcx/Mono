@@ -2,6 +2,7 @@ bin
 obj
 tests
 vendor/premake
+src
 
 .vscode
 
