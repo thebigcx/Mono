@@ -1,5 +1,9 @@
 bin
 obj
+tests
+vendor/premake
+
+.vscode
 
 *.make
 
@@ -7,3 +11,5 @@ Makefile
 
 *.dll
 *.cs
+
+premake5.lua
