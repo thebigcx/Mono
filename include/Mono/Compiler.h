@@ -13,7 +13,7 @@ public:
 
     void buildLibrary(const std::string& target, const std::string& script)
     {
-        std::string command = m_compilerPath + " -out:" + target + " -target:library " + script;
+        std::string command = m_compilerPath + " -unsafe -out:" + target + " -target:library " + script;
         std::system(command.c_str());
     }
 

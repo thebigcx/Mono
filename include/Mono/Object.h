@@ -27,7 +27,7 @@ public:
         void operator=(T&& value)
         {
             auto object = ToMonoConverter<T>::convert(m_domain, std::forward<T>(value));
-            mono_field_set_value(m_parent, m_field, (void*)object);
+            mono_field_set_value(m_parent, m_field, &object);
         }
 
         template<typename T>
@@ -84,17 +84,37 @@ public:
         constructor.invokeInstance<void(Args...)>(*this, std::forward<Args>(args)...);
     }
 
-    template<typename FunctionSignature>
-    Method getMethod(const std::string& signature)
+    MonoMethod* getMonoMethod(const std::string& name)
     {
-        return getType().getMethod(signature);
+        return getType().getMonoMethod(name);
     }
 
-    template<typename FunctionSignature>
-    Method getStaticMethod(const std::string& signature)
+    template<typename Signature>
+    auto getMethod(const std::string& name)
     {
-        Method method(Domain(m_domain), getType(), signature);
-        return method;
+        using Traits = InternalGetFunctionTraits<Signature>;
+
+        auto methodType = getMonoMethod(name);
+        auto functor = [f = Method(m_domain, methodType), o = m_object](auto&&... args) mutable -> typename Traits::ResultType
+        {
+            return f.invokeInstance<Signature>(o, std::forward<decltype(args)>(args)...);
+        };
+
+        return typename Traits::Type(std::move(functor));
+    }
+
+    template<typename Signature>
+    auto getStaticMethod(const std::string& name)
+    {
+        using Traits = InternalGetFunctionTraits<Signature>;
+
+        auto methodType = getMonoMethod(name);
+        auto functor = [f = Method(m_domain, methodType)](auto&&... args) mutable -> typename Traits::ResultType
+        {
+            return f.invokeStatic<Signature>(std::forward<decltype(args)>(args)...);
+        };
+
+        return typename Traits::Type(std::move(functor));
     }
 
     Field operator[](const std::string& fieldName) const

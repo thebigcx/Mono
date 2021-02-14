@@ -7,27 +7,36 @@
 #include <mono/jit/jit.h>
 
 #include <Mono/Exception.h>
+#include <Mono/Object.h>
+#include <Mono/TypeConversionForward.h>
 
 namespace Mono
 {
 
-class Object;
-
-template<typename T>
-struct ToMonoConverter
+template<>
+struct ToMonoConverter<std::string>
 {
-    static auto convert(const Domain& domain, const typename std::decay<T>::type& type)
+    static MonoString* convert(const Domain& domain, const std::string& str)
     {
-        return std::addressof(type);
+        return mono_string_new(domain.get(), str.c_str());
     }
 };
 
 template<>
-struct ToMonoConverter<std::string>
+struct ToMonoConverter<const char*>
 {
-    static auto convert(const Domain& domain, const std::string& str)
+    static MonoString* convert(const Domain& domain, const char* str)
     {
-        return mono_string_new(domain.get(), str.c_str());
+        return mono_string_new(domain.get(), str);
+    }
+};
+
+template<>
+struct ToMonoConverter<char*>
+{
+    static MonoString* convert(const Domain& domain, const char* str)
+    {
+        return mono_string_new(domain.get(), str);
     }
 };
 
@@ -40,21 +49,12 @@ struct ToMonoConverter<std::wstring>
     }
 };
 
-template<typename T>
-struct FromMonoConverter
+template<>
+struct ToMonoConverter<Object>
 {
-    // If the type needs to be unboxed from mono-types
-    template<typename U>
-    static typename std::enable_if<std::is_same<U, MonoObject*>::value, T>::type convert(const Domain& domain, U type)
+    static MonoObject* convert(const Domain& domain, const Object& object)
     {
-        return *reinterpret_cast<T*>(mono_object_unbox(type));
-    }
-
-    // If type is already converted (no unboxing needed)
-    template<typename U>
-    static typename std::enable_if<!std::is_same<U, MonoObject*>::value, T>::type convert(const Domain& domain, U type)
-    {
-        return *type;
+        return object.get();
     }
 };
 
@@ -97,12 +97,27 @@ struct FromMonoConverter<std::string>
 
         return convert(domain, str);
     }
+
+    static std::string convert(const Domain& domain, const std::string* str)
+    {
+        return *str;
+    }
+};
+
+template<>
+struct FromMonoConverter<Object>
+{
+    static Object convert(const Domain& domain, MonoObject* object)
+    {
+        return Object(object);
+    }
 };
 
 template<typename T>
 struct CanBeTriviallyConverted
 {
-    static constexpr size_t value = std::is_standard_layout<T>::value;
+    //static constexpr size_t value = std::is_standard_layout<T>::value;
+    static constexpr size_t value = false;
 };
 
 template<>

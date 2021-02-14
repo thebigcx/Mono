@@ -10,7 +10,8 @@
 #include <Mono/Access.h>
 #include <Mono/Domain.h>
 #include <Mono/Exception.h>
-#include <Mono/TypeConversion.h>
+#include <Mono/TypeConversionForward.h>
+#include <Mono/FunctionTraits.h>
 
 namespace Mono
 {
@@ -81,19 +82,19 @@ public:
     }
 
     template<typename T, typename... Args>
-    decltype(auto) invokeInstance(MonoObject* object, Args&&... args)
+    decltype(auto) invokeInstance(MonoObject* object, Args&&... args) const
     {
         return FunctionInvoker<T>::invoke(*this, object, std::forward<Args>(args)...);
     }
 
     template<typename T, typename... Args, typename Object>
-    decltype(auto) invokeInstance(const Object& object, Args&&... args)
+    decltype(auto) invokeInstance(const Object& object, Args&&... args) const
     {
         return invokeInstance<T>(object.get(), std::forward<Args>(args)...);
     }
 
     template<typename T, typename... Args>
-    decltype(auto) invokeStatic(Args&&... args)
+    decltype(auto) invokeStatic(Args&&... args) const
     {
         return invokeInstance<T>(static_cast<MonoObject*>(nullptr), std::forward<Args>(args)...);
     }
@@ -162,6 +163,18 @@ public:
 
     Domain getDomain() const { return Domain(m_domain); }
 
+    template<typename Signature>
+    auto asFunction() const
+    {
+        using Traits = InternalGetFunctionTraits<Signature>;
+        using ResultType = typename Traits::ResultType;
+        using Functor = typename Traits::Type;
+
+        return Functor([method = *this](auto&&... args)
+        {
+            return method.invokeStatic<ResultType>(std::forward<decltype(args)>(args)...);
+        });
+    }
 
 private:
     void generateMeta()

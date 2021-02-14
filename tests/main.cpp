@@ -4,12 +4,61 @@
 #include <Mono/Object.h>
 
 #include <iostream>
+#include <cstring>
 
-static int Log()
+struct Transform
 {
-    int msg = 10;
-    std::cout << msg << "\n";
-    return msg;
+    Transform() {}
+    Transform(float x_, float y_, float z_)
+        : x(x_), y(y_), z(z_) {}
+
+    float x, y, z;
+};
+
+namespace Mono
+{
+
+template<>
+struct ToMonoConverter<Transform>
+{
+    static auto convert(const Domain& domain, const Transform& transform)
+    {
+        Assembly* assembly = reinterpret_cast<Assembly*>(getUserPointer());
+        Type type(assembly->getImage(), "Engine", "Transform");
+
+        Object object(domain, type);
+        object["m_x"] = transform.x;
+        object["m_y"] = transform.y;
+        object["m_z"] = transform.z;
+        return object.get();
+    }
+};
+
+}
+
+int Log(std::string a)
+{
+    std::cout << "[CSHARP] " << a << "\n";
+    return 1;
+}
+
+int LogInt(int a)
+{
+    std::cout << "[CSHARP] " << a << "\n";
+    return 10;
+}
+
+Transform transform;
+
+Mono::Object* getTransform()
+{
+    static auto t = Mono::Object(Mono::ToMonoConverter<Transform>::convert(Mono::getCurrentDomain(), transform));
+    return &t;
+}
+
+void setTransformX(float x)
+{
+    transform.x = x;
 }
 
 int main()
@@ -21,18 +70,21 @@ int main()
 
     Mono::Assembly assembly(Mono::getCurrentDomain(), "Tests.dll");
 
-    Mono::addInternalCall<int()>("Tests.TestClass::Log()", MONO_BIND_FN(Log));
-    //mono_add_internal_call("Tests.TestClass::Log(int)", (const void*)Log);
+    Mono::setUserPointer(&assembly);
+
+    Mono::addInternalCall<int(std::string)>("Tests.TestClass::Log(string)", MONO_BIND_FN(Log));
+    Mono::addInternalCall<int(int)>("Tests.TestClass::Log(int)", MONO_BIND_FN(LogInt));
+    Mono::addInternalCall<Mono::Object*()>("Engine.GameObject::GetTransform_Internal()", MONO_BIND_FN(getTransform));
+    Mono::addInternalCall<void(float)>("Engine.Transform::SetTransformX_Internal(single)", MONO_BIND_FN(setTransformX));
 
     Mono::Type type(assembly.getImage(), "Tests", "TestClass");
-    Mono::Object object(Mono::getCurrentDomain(), type, "::.ctor(int)", 5);
-    auto powMethod = object.getMethod<void(std::string, std::string)>("::add(string,string)");
-    powMethod.invokeInstance<void(std::string, std::string)>(object, "Hello, ", "world!");
+    Mono::Object object(Mono::getCurrentDomain(), type);
 
+    auto method = object.getMethod<void()>("::onUpdate()");
+    method();
 
+    std::cout << "Transform: " << transform.x << ", " << transform.y << ", " << transform.z << "\n";
 
-    //object["price"] = 10;
-    std::cout << (int)object["price"] << "\n";
 
     return 0;
 }

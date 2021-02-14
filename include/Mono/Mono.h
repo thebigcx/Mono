@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <iostream>
 
 #include <mono/jit/jit.h>
 
@@ -14,10 +15,21 @@ namespace Mono
 #define MONO_BIND_FN(func) [](auto... args) -> decltype(auto) { return func(std::move(args)...); }
 
 static Domain* s_domain;
+static void* s_userPointer = nullptr;
 
 inline Domain& getCurrentDomain()
 {
     return *s_domain;
+}
+
+inline void setUserPointer(void* ptr)
+{
+    s_userPointer = ptr;
+}
+
+inline void* getUserPointer()
+{
+    return s_userPointer;
 }
 
 template<typename T>

@@ -8,7 +8,7 @@
 #include <Mono/Exception.h>
 #include <Mono/FieldView.h>
 #include <Mono/Method.h>
-#include <Mono/Mono.h>
+#include <Mono/Domain.h>
 
 namespace Mono
 {
@@ -42,13 +42,13 @@ public:
         generateMeta();
     }
 
-    Method getMethod(const std::string& name)
+    MonoMethod* getMonoMethod(const std::string& name)
     {
         auto methodDesc = mono_method_desc_new(name.c_str(), 0);
         MonoMethod* method = mono_method_desc_search_in_class(methodDesc, m_class);
         mono_method_desc_free(methodDesc);
 
-        return Method(getCurrentDomain(), method);
+        return method;
     }
 
     MonoClassField* getField(const std::string& name)
@@ -86,11 +86,6 @@ public:
     Type getParentType() const
     {
         return Type(mono_class_get_parent(m_class));
-    }
-
-    std::vector<std::string> getProperties()
-    {
-        
     }
     
     bool hasBaseType()
