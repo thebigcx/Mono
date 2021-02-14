@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <functional>
 
 namespace Mono
 {
@@ -19,6 +20,8 @@ struct FunctionTraits<R(Args...)>
 {
     using ReturnType = R;
     using FunctionType = R(Args...);
+
+    using Type = std::function<FunctionType>;
     
     static constexpr size_t arity = sizeof...(Args);
 
@@ -31,21 +34,5 @@ struct FunctionTraits<R(Args...)>
         using Type = typename std::tuple_element<N, Arguments>::type;
     };
 };
-
-struct Typename
-{
-    std::string name;
-    std::string fullname;
-};
-
-inline const std::map<std::size_t, Typename>& getTypes()
-{
-    static const std::map<std::size_t, Typename> typenames =
-    {
-
-    }; 
-
-    return typenames;
-}
 
 }

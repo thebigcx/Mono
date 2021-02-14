@@ -50,10 +50,14 @@ int LogInt(int a)
 
 Transform transform;
 
-Mono::Object* getTransform()
+Mono::Object getComponent(std::string type)
 {
-    static auto t = Mono::Object(Mono::ToMonoConverter<Transform>::convert(Mono::getCurrentDomain(), transform));
-    return &t;
+    static Mono::Object obj;
+
+    if (type == "Transform")
+        obj = Mono::Object(Mono::ToMonoConverter<Transform>::convert(Mono::getCurrentDomain(), transform));
+        
+    return obj;
 }
 
 void setTransformX(float x)
@@ -74,7 +78,7 @@ int main()
 
     Mono::addInternalCall<int(std::string)>("Tests.TestClass::Log(string)", MONO_BIND_FN(Log));
     Mono::addInternalCall<int(int)>("Tests.TestClass::Log(int)", MONO_BIND_FN(LogInt));
-    Mono::addInternalCall<Mono::Object*()>("Engine.GameObject::GetTransform_Internal()", MONO_BIND_FN(getTransform));
+    Mono::addInternalCall<Mono::Object(std::string)>("Engine.GameObject::GetComponent_Internal(string)", MONO_BIND_FN(getComponent));
     Mono::addInternalCall<void(float)>("Engine.Transform::SetTransformX_Internal(single)", MONO_BIND_FN(setTransformX));
 
     Mono::Type type(assembly.getImage(), "Tests", "TestClass");

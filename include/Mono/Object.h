@@ -55,6 +55,8 @@ public:
 
 
 public:
+    Object() {}
+
     Object(const Domain& domain, const Type& type)
         : m_domain(domain.get())
     {
@@ -92,10 +94,10 @@ public:
     template<typename Signature>
     auto getMethod(const std::string& name)
     {
-        using Traits = InternalGetFunctionTraits<Signature>;
+        using Traits = FunctionTraits<Signature>;
 
         auto methodType = getMonoMethod(name);
-        auto functor = [f = Method(m_domain, methodType), o = m_object](auto&&... args) mutable -> typename Traits::ResultType
+        auto functor = [f = Method(m_domain, methodType), o = m_object](auto&&... args) mutable -> typename Traits::ReturnType
         {
             return f.invokeInstance<Signature>(o, std::forward<decltype(args)>(args)...);
         };
@@ -106,10 +108,10 @@ public:
     template<typename Signature>
     auto getStaticMethod(const std::string& name)
     {
-        using Traits = InternalGetFunctionTraits<Signature>;
+        using Traits = FunctionTraits<Signature>;
 
         auto methodType = getMonoMethod(name);
-        auto functor = [f = Method(m_domain, methodType)](auto&&... args) mutable -> typename Traits::ResultType
+        auto functor = [f = Method(m_domain, methodType)](auto&&... args) mutable -> typename Traits::ReturnType
         {
             return f.invokeStatic<Signature>(std::forward<decltype(args)>(args)...);
         };

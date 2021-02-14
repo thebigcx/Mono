@@ -113,17 +113,4 @@ struct FromMonoConverter<Object>
     }
 };
 
-template<typename T>
-struct CanBeTriviallyConverted
-{
-    //static constexpr size_t value = std::is_standard_layout<T>::value;
-    static constexpr size_t value = false;
-};
-
-template<>
-struct CanBeTriviallyConverted<Object>
-{
-    static constexpr size_t value = false;
-};
-
 }

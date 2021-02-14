@@ -37,10 +37,7 @@ struct InternalConvertTypeToMono
 {
     using Decay = typename std::decay<T>::type;
 
-    using Result = typename std::conditional<
-        CanBeTriviallyConverted<Decay>::value,
-        const Decay*, decltype(ToMonoConverter<T>::convert(std::declval<MonoDomain*>(), std::declval<Decay>()))
-    >::type;
+    using Result = decltype(ToMonoConverter<T>::convert(std::declval<MonoDomain*>(), std::declval<Decay>()));
 };
 
 template<>

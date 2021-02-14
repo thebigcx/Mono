@@ -11,7 +11,7 @@
 #include <Mono/Domain.h>
 #include <Mono/Exception.h>
 #include <Mono/TypeConversionForward.h>
-#include <Mono/FunctionTraits.h>
+#include <Mono/TypeTraits.h>
 
 namespace Mono
 {
@@ -100,21 +100,7 @@ public:
     }
 
     MonoMethod* get() const { return m_method; }
-/*
-    std::vector<Type> getParamTypes() const
-    {
-        void* iter = nullptr;
-        auto type = mono_signature_get_params(m_methodSignature, &iter);
-        std::vector<Type> params;
-        while (type)
-        {
-            params.emplace_back(Type(type));
-            type = mono_signature_get_params(m_methodSignature, &iter);
-        }
 
-        return params;
-    }
-*/
     const std::string& getName() const
     {
         return m_name;
@@ -166,7 +152,7 @@ public:
     template<typename Signature>
     auto asFunction() const
     {
-        using Traits = InternalGetFunctionTraits<Signature>;
+        using Traits = FunctionTraits<Signature>;
         using ResultType = typename Traits::ResultType;
         using Functor = typename Traits::Type;
 

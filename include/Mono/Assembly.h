@@ -18,10 +18,21 @@ class Domain;
 class Assembly
 {
 public:
-    Assembly() = default;
+    Assembly()
+    {
+
+    }
+
+    ~Assembly()
+    {
+        if (m_assembly)
+        {
+            mono_assembly_close(m_assembly);
+        }
+    }
 
     Assembly(const Domain& domain, const std::string& path)
-        : m_domain(domain.get())
+        : m_domain(domain.get()), m_path(path)
     {
         m_assembly = mono_domain_assembly_open(domain.get(), path.c_str());
         m_image = mono_assembly_get_image(m_assembly);
@@ -54,6 +65,8 @@ private:
     MonoAssembly* m_assembly = nullptr;
     MonoDomain* m_domain = nullptr;
     MonoImage* m_image = nullptr;
+
+    std::string m_path = "";
 };
 
 }

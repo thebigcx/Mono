@@ -37,18 +37,14 @@ public class Transform : GameComponent
 
 public class GameObject
 {
-    public T GetComponent<T>()
+    public T GetComponent<T>() where T : GameComponent
     {
-        
-    }
-
-    public static unsafe Transform GetTransform()
-    {
-        return GetTransform_Internal();
+        var component = GetComponent_Internal(typeof(T).Name);
+        return (T)(GameComponent)component;
     }
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public static extern ref Transform GetTransform_Internal();
+    public static extern Transform GetComponent_Internal(string type);
 };
 
 }
@@ -65,7 +61,7 @@ public class TestClass : Engine.GameObject
 
     public void onUpdate()
     {
-        var transform = GetTransform();
+        var transform = GetComponent<Engine.Transform>();
         transform.x = 10;
     }
 };
