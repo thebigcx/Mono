@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
 
 #include <mono/jit/jit.h>
 #include <mono/metadata/debug-helpers.h>
