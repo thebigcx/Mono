@@ -44,7 +44,7 @@ public class GameObject
     }
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    public static extern Transform GetComponent_Internal(string type);
+    public static extern GameComponent GetComponent_Internal(string type);
 };
 
 }
